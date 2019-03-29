@@ -23,14 +23,14 @@ Or you build your own image from source:
 
 ```bash
 # Download sources
-git clone https://github.com/cyper85/osm2pgsql.git
-cd osm2pgsql/
+git clone https://github.com/cyper85/mapnik.git
+cd mapnik/
 
 # Build it
-docker build --tag osm2pgsql .
+docker build --tag mapnik .
 
 # Install an instance
-docker run --name test-osm2pgsql --network postgis-net osm2pgsql
+docker run --name test-osm2pgsql --network postgis-net mapnik
 ```
 
 ## Additional parameter
