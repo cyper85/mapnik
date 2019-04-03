@@ -78,6 +78,10 @@ RUN chown renderer /var/run/renderd
 RUN echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf
 RUN a2enconf mod_tile
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
+
+RUN systemctl enable apache2
+RUN service start apache2
+
 USER renderer
 
 COPY run.sh /

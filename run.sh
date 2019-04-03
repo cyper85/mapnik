@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# as renderer
-su - renderer
+service apache2 restart
 
 cd /usr/local/src/openstreetmap-carto
 python3 editmapnikconfig.py
