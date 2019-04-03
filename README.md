@@ -1,6 +1,6 @@
 # Mapnik-Tile-Server
 
-See also [Docker-Hub: cyper85/mapnik](https://cloud.docker.com/repository/docker/cyper85/mapnik)
+See also [Docker-Hub: cyper85/mapnik](https://hub.docker.com/r/cyper85/mapnik)
 
 ## Installation
 You need a [PostGIS-Container](https://github.com/cyper85/postgis) and an [osm2pgsql-Container](https://github.com/cyper85/osm2pgsql).
@@ -13,7 +13,7 @@ docker network create postgis-net
 docker run --detach --name test-postgis --network postgis-net cyper85/postgis
 
 # Install a osm2pgsql-instance
-docker run --env POSTGRES_HOST=test-postgis --detach --name test-osm2pgsql --network postgis-net cyper85/osm2pgsql
+docker run --env POSTGRES_HOST=test-postgis --name test-osm2pgsql --network postgis-net cyper85/osm2pgsql
 
 # Install a mapnik-instance
 docker run --detach --env POSTGRES_HOST=test-postgis --detach --name test-mapnik --network postgis-net --port 80:80 cyper85/mapnik
@@ -30,7 +30,7 @@ cd mapnik/
 docker build --tag mapnik .
 
 # Install an instance
-docker run --name test-osm2pgsql --network postgis-net mapnik
+docker run --name test-mapnik --network postgis-net mapnik
 ```
 
 ## Additional parameter
@@ -42,3 +42,5 @@ POSTGRES_USER | postgres | Database-User
 POSTGRES_PASSWORD |  | Database-Password
 POSTGRES_HOST | localhost | Database-Hostname
 POSTGRES_PORT | 5432 | Database-Port
+
+You can use a volume for the Tile-Cache-Directory: */var/lib/mod_tile*
