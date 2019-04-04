@@ -14,7 +14,7 @@ RUN apt-get -y upgrade
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
 
-RUN apt-get -y install autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml
+RUN apt-get -y install autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml systemd
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN adduser --disabled-password --gecos "" renderer
@@ -79,15 +79,13 @@ RUN echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/a
 RUN a2enconf mod_tile
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
 
-RUN systemctl enable apache2
-RUN service start apache2
-
 USER renderer
 
 COPY run.sh /
 
 USER root
 RUN chmod a+x /run.sh
+RUN systemctl enable apache2
 
 USER renderer
 ENTRYPOINT ["/run.sh"]
