@@ -13,7 +13,7 @@ RUN apt-get update && apt-get -y upgrade
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
 
-RUN apt-get update && apt-get -y install autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml sudo
+RUN apt-get update && apt-get -y install autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml sudo systemd
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN adduser --disabled-password --gecos "" renderer
