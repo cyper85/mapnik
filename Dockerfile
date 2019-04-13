@@ -9,12 +9,11 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-RUN apt update
-RUN apt-get -y upgrade
+RUN apt update && apt-get -y upgrade
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
 
-RUN apt-get -y install autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml sudo
+RUN apt-get update && apt-get -y install systemd autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 npm python3-lxml sudo
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN adduser --disabled-password --gecos "" renderer
@@ -30,12 +29,7 @@ RUN chmod -R g+w openstreetmap-carto/
 
 # Install mod_tile
 WORKDIR /usr/local/src/mod_tile
-RUN ./autogen.sh
-RUN ./configure
-RUN make
-RUN make install
-RUN make install-mod_tile
-RUN ldconfig
+RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
 
 # Install carto
 WORKDIR /usr/local/src/openstreetmap-carto
@@ -47,10 +41,7 @@ RUN python -c 'import mapnik'
 
 # Configure stylesheet
 WORKDIR /usr/local/src/openstreetmap-carto
-RUN carto -v
-RUN carto project.mml > mapnik.xml
-RUN cp mapnik.xml mapnik.bak.xml
-RUN python3 editmapnikconfig.py
+RUN carto -v && carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && python3 editmapnikconfig.py
 
 # Load shapefiles
 WORKDIR /usr/local/src/openstreetmap-carto
@@ -58,25 +49,14 @@ RUN scripts/get-shapefiles.py
 
 # Configure renderd
 USER root
-RUN sed -i 's/renderaccount/renderer/g' /usr/local/etc/renderd.conf
-RUN sed -i 's/hot/tile/g' /usr/local/etc/renderd.conf
-RUN sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /usr/local/etc/renderd.conf
-RUN sed -i 's#^XML=.*$#XML=/usr/local/src/openstreetmap-carto/mapnik.xml#g' /usr/local/etc/renderd.conf
+RUN MAPNIKPLUGIN=`mapnik-config --input-plugins` && sed -i -e 's#^plugins_dir=.*$#plugins_dir='$MAPNIKPLUGIN'#' -e 's/renderaccount/renderer/g' -e 's/hot/tile/g' -e 's#^XML=.*$#XML=/usr/local/src/openstreetmap-carto/mapnik.xml#g' -e 's#^URI=.*$#URI=/tile/#' /usr/local/etc/renderd.conf && sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /usr/local/etc/renderd.conf
 
-RUN MAPNIKPLUGIN=`mapnik-config --input-plugins`
-RUN sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /usr/local/etc/renderd.conf
-RUN sed -i 's#^plugins_dir=.*$#plugins_dir='$MAPNIKPLUGIN'#' /usr/local/etc/renderd.conf
-RUN sed -i 's#^URI=.*#URI=/tile/#g' /usr/local/etc/renderd.conf
 USER renderer
 
 # Configure Apache
 USER root
-RUN mkdir /var/lib/mod_tile
-RUN chown renderer /var/lib/mod_tile
-RUN mkdir /var/run/renderd
-RUN chown renderer /var/run/renderd
-RUN echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf
-RUN a2enconf mod_tile
+RUN mkdir /var/lib/mod_tile && chown renderer /var/lib/mod_tile && mkdir /var/run/renderd && chown renderer /var/run/renderd && echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && a2enconf mod_tile
+
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
 
 USER renderer
