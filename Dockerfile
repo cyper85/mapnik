@@ -9,6 +9,8 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
+ENV CARTO_VERSION v4.22.0
+
 RUN apt update && apt-get -y upgrade
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
@@ -21,7 +23,7 @@ RUN adduser --disabled-password --gecos "" renderer
 # Load Sources
 WORKDIR /usr/local/src
 RUN git clone https://github.com/openstreetmap/mod_tile/
-RUN git clone https://github.com/gravitystorm/openstreetmap-carto.git
+RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git
 COPY editmapnikconfig.py /usr/local/src/openstreetmap-carto/
 RUN chown -R root:renderer openstreetmap-carto/
 RUN chmod -R g+w openstreetmap-carto/
