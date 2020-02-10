@@ -1,0 +1,12 @@
+services:
+  - docker
+
+install:
+  - docker build -t cyper85/mapnik -f Dockerfile .
+  - docker run -d --name mapnikNormal cyper85/mapnik
+
+script:
+  - docker ps | grep -q mapnikNormal
+
+after_script:
+  - docker images
