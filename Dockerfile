@@ -9,7 +9,7 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-ENV CARTO_VERSION v4.25.0
+ENV CARTO_VERSION v5.2.0
 
 RUN apt update && apt-get -y upgrade && apt-get -y install curl
 
