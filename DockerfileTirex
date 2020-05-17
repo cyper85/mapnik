@@ -9,6 +9,8 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
+ENV CARTO_VERSION=v5.2.0
+
 RUN adduser --disabled-password --gecos "" tirex && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
