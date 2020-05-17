@@ -1,0 +1,58 @@
+FROM ubuntu:20.04
+
+USER root
+
+ENV TZ=UTC
+ENV POSTGRES_DB=postgres
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=""
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
+
+RUN adduser --disabled-password --gecos "" tirex
+
+WORKDIR /usr/local/src
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt update && apt-get -y upgrade && apt-get -y install curl git make python3-distutils mapnik-utils nodejs node-carto libmapnik-dev apache2-dev apache2 fonts-*
+RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
+    git clone https://github.com/openstreetmap/mod_tile.git && \
+    git clone https://github.com/openstreetmap/tirex.git
+
+WORKDIR /usr/local/src/openstreetmap-carto
+COPY editmapnikconfig.py /usr/local/src/openstreetmap-carto/
+RUN carto -v && \
+    carto project.mml > mapnik.xml && \
+    python3 scripts/get-shapefiles.py&& \
+    python3 editmapnikconfig.py
+
+WORKDIR /usr/local/src/mod_tile
+RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
+
+WORKDIR /usr/local/src/tirex
+RUN make && make install
+RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
+COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
+COPY apacheTirex.conf /etc/apache2/sites-available/000-default.conf
+
+USER root
+RUN mkdir /var/lib/mod_tile && chown tirex:tirex /var/lib/mod_tile && \
+    echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
+    a2enconf mod_tile
+
+COPY apache.conf /etc/apache2/sites-available/000-default.conf
+
+USER renderer
+
+COPY runTirex.sh /
+
+USER root
+RUN chmod a+x /run.sh && \
+    systemctl enable apache2 && \
+    systemctl enable tirex-backend-manager && \
+    systemctl enable tirex-master
+
+#USER renderer
+ENTRYPOINT ["/runTirex.sh"]
+CMD []
+
+EXPOSE 80
