@@ -9,18 +9,12 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-ENV CARTO_VERSION v5.2.0
-
-RUN apt update && apt-get -y upgrade && apt-get -y install curl
-
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
-
-RUN apt-get update && apt-get -y install systemd autoconf apache2-dev libtool \
+RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd autoconf apache2-dev libtool \
     libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin \
-    libmapnik-dev mapnik-utils python-mapnik git fonts-noto-cjk fonts-hanazono \
+    libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono \
     fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 \
     libgdal-dev default-libmysqlclient-dev \
-    python3-lxml sudo && rm -rf /var/lib/apt/lists/*
+    python3-lxml sudo nodejs node-carto && rm -rf /var/lib/apt/lists/*
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN adduser --disabled-password --gecos "" renderer
@@ -37,11 +31,6 @@ RUN chmod -R g+w openstreetmap-carto/
 # Install mod_tile
 WORKDIR /usr/local/src/mod_tile
 RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
-
-# Install carto
-WORKDIR /usr/local/src/openstreetmap-carto
-RUN npm install -g carto
-
 
 USER renderer
 RUN python -c 'import mapnik'
