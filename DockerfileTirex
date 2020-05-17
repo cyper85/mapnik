@@ -9,10 +9,10 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-RUN adduser --disabled-password --gecos "" tirex
+RUN adduser --disabled-password --gecos "" tirex && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /usr/local/src
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt update && apt-get -y upgrade && apt-get -y install curl git make python3-distutils mapnik-utils nodejs node-carto libmapnik-dev apache2-dev apache2 fonts-*
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
