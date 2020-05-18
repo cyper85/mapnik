@@ -39,7 +39,7 @@ USER renderer
 
 # Configure stylesheet
 WORKDIR /usr/local/src/openstreetmap-carto
-RUN carto -v && carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
+RUN carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
     python3 editmapnikconfig.py
 
 # Load shapefiles
