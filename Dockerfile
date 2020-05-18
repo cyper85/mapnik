@@ -14,11 +14,12 @@ ENV CARTO_VERSION=v5.2.0
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     adduser --disabled-password --gecos "" renderer
 
-RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd autoconf apache2-dev libtool \
-    libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin \
+RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd \ 
+    autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev \
+    libgeos++-dev libproj-dev gdal-bin \
     libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono \
     fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs apache2 \
-    libgdal-dev default-libmysqlclient-dev \
+    libgdal-dev default-libmysqlclient-dev python3-mapnik \
     python3-lxml sudo nodejs node-carto && rm -rf /var/lib/apt/lists/*
 
 # Load Sources
@@ -35,7 +36,6 @@ WORKDIR /usr/local/src/mod_tile
 RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
 
 USER renderer
-RUN python -c 'import mapnik'
 
 # Configure stylesheet
 WORKDIR /usr/local/src/openstreetmap-carto
