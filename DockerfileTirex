@@ -50,10 +50,9 @@ COPY runTirex.sh /
 
 USER root
 RUN chmod a+x /runTirex.sh && \
-    systemctl daemon-reload && \
-    systemctl enable apache2 && \
-    systemctl enable tirex-backend-manager && \
-    systemctl enable tirex-master
+    service apache2 restart && \
+    service tirex-backend-manager restart && \
+    service tirex-master restart
 
 #USER renderer
 ENTRYPOINT ["/runTirex.sh"]
