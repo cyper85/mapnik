@@ -21,7 +21,8 @@ RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd \
     fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 \
     libgdal-dev default-libmysqlclient-dev python3-mapnik \
     python3-lxml sudo && rm -rf /var/lib/apt/lists/* && \
-    npm install -g carto
+    npm install -g carto && \
+    add-apt-repository ppa:osmadmins/ppa && apt update && apt install -y libapache2-mod-tile 
 
 # Load Sources
 WORKDIR /usr/local/src
@@ -30,12 +31,6 @@ RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/
 COPY editmapnikconfig.py /usr/local/src/openstreetmap-carto/
 RUN chown -R root:renderer openstreetmap-carto/
 RUN chmod -R g+w openstreetmap-carto/
-
-
-# Install mod_tile
-WORKDIR /usr/local/src/mod_tile
-RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
-
 USER renderer
 
 # Configure stylesheet
@@ -63,7 +58,6 @@ USER renderer
 USER root
 RUN mkdir /var/lib/mod_tile && chown renderer /var/lib/mod_tile && mkdir /var/run/renderd && \
     chown renderer /var/run/renderd && \
-    echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
     a2enconf mod_tile
 
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
