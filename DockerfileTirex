@@ -15,7 +15,7 @@ RUN adduser --disabled-password --gecos "" tirex && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /usr/local/src
-RUN apt update && apt-get -y upgrade && apt-get -y install curl git make python3-distutils mapnik-utils nodejs node-carto libmapnik-dev apache2-dev apache2 fonts-*
+RUN apt update && apt-get -y upgrade && apt-get -y install curl git make python3-distutils mapnik-utils nodejs node-carto libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
     git clone https://github.com/openstreetmap/tirex.git
