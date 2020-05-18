@@ -18,9 +18,8 @@ RUN adduser --disabled-password --gecos "" tirex && \
 WORKDIR /usr/local/src
 RUN apt update && \
     apt-get -y upgrade && \
-    apt-get -y install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml software-properties-common && \
-    npm install -g carto && \
-    add-apt-repository ppa:osmadmins/ppa && apt update && apt install -y libapache2-mod-tile 
+    apt-get -y install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml && \
+    npm install -g carto
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
     git clone https://github.com/openstreetmap/tirex.git
@@ -31,13 +30,16 @@ RUN carto project.mml > mapnik.xml && \
     python3 scripts/get-shapefiles.py && \
     python3 editmapnikconfig.py
 
+WORKDIR /usr/local/src/mod_tile
+RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
+
 WORKDIR /usr/local/src/tirex
 RUN make && make install
-RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf && \
-    cp debian/* /etc/systemd/system/multi-user.target.wants/
+RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
 
 RUN mkdir /var/lib/mod_tile && chown tirex:tirex /var/lib/mod_tile && \
+    echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
     a2enconf mod_tile
 COPY apacheTirex.conf /etc/apache2/sites-available/000-default.conf
 
