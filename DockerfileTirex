@@ -18,7 +18,7 @@ RUN adduser --disabled-password --gecos "" tirex && \
 WORKDIR /usr/local/src
 RUN apt update && \
     apt-get -y upgrade && \
-    apt-get -y install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts && \
+    apt-get -y install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl && \
     npm install -g carto
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
@@ -36,7 +36,7 @@ RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile
 WORKDIR /usr/local/src/tirex
 RUN make && make deb && \ 
     ls -lisah debian && pwd && \
-    find . -name *.deb && \
+    find . -name "*.deb" && \
     dpkg -i tirex-core*.deb && \
     dpkg -i tirex-backend-mapnik*.deb && \
     make deb-clean
