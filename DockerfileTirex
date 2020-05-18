@@ -11,6 +11,7 @@ ENV POSTGRES_PORT=5432
 
 ENV CARTO_VERSION=v5.2.0
 
+USER root
 RUN adduser --disabled-password --gecos "" tirex && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -36,21 +37,18 @@ WORKDIR /usr/local/src/tirex
 RUN make && make install
 RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
-COPY apacheTirex.conf /etc/apache2/sites-available/000-default.conf
 
-USER root
 RUN mkdir /var/lib/mod_tile && chown tirex:tirex /var/lib/mod_tile && \
     echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
     a2enconf mod_tile
+COPY apacheTirex.conf /etc/apache2/sites-available/000-default.conf
 
-COPY apache.conf /etc/apache2/sites-available/000-default.conf
-
-USER renderer
+USER tirex
 
 COPY runTirex.sh /
 
 USER root
-RUN chmod a+x /run.sh && \
+RUN chmod a+x /runTirex.sh && \
     systemctl enable apache2 && \
     systemctl enable tirex-backend-manager && \
     systemctl enable tirex-master
