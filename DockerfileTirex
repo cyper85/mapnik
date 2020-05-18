@@ -36,6 +36,7 @@ RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile
 WORKDIR /usr/local/src/tirex
 RUN make && make deb && \ 
     ls -lisah && pwd && \
+    find . -name *.deb && \
     dpkg -i tirex-core*.deb && \
     dpkg -i tirex-backend-mapnik*.deb && \
     make deb-clean
