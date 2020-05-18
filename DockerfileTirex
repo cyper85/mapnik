@@ -34,9 +34,10 @@ WORKDIR /usr/local/src/mod_tile
 RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile && ldconfig
 
 WORKDIR /usr/local/src/tirex
-RUN make && make deb && \
-    dpkg -i tirex-core.deb && \
-    dpkg -i tirex-backend-mapnik.debs && \
+RUN make && make deb && \ 
+    ls -lisah && pwd && \
+    dpkg -i tirex-core*.deb && \
+    dpkg -i tirex-backend-mapnik*.deb && \
     make deb-clean
 RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
