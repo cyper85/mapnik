@@ -22,8 +22,7 @@ RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/
 
 WORKDIR /usr/local/src/openstreetmap-carto
 COPY editmapnikconfig.py /usr/local/src/openstreetmap-carto/
-RUN carto -v && \
-    carto project.mml > mapnik.xml && \
+RUN carto project.mml > mapnik.xml && \
     python3 scripts/get-shapefiles.py&& \
     python3 editmapnikconfig.py
 
