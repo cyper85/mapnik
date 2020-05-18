@@ -20,7 +20,7 @@ RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd \
     libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono \
     fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 \
     libgdal-dev default-libmysqlclient-dev python3-mapnik \
-    python3-lxml sudo && rm -rf /var/lib/apt/lists/* && \
+    python3-lxml sudo software-properties-common && rm -rf /var/lib/apt/lists/* && \
     npm install -g carto && \
     add-apt-repository ppa:osmadmins/ppa && apt update && apt install -y libapache2-mod-tile 
 
