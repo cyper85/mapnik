@@ -35,7 +35,8 @@ RUN ./autogen.sh && ./configure && make && make install && make install-mod_tile
 
 WORKDIR /usr/local/src/tirex
 RUN make && make install
-RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
+RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf && \
+    cp ./debian/*.service /etc/systemd/system/multi-user.target.wants/
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
 
 RUN mkdir /var/lib/mod_tile && chown tirex:tirex /var/lib/mod_tile && \
