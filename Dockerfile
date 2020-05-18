@@ -20,7 +20,8 @@ RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd \
     libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono \
     fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 \
     libgdal-dev default-libmysqlclient-dev python3-mapnik \
-    python3-lxml sudo && rm -rf /var/lib/apt/lists/*
+    python3-lxml sudo && rm -rf /var/lib/apt/lists/* && \
+    npm install -g carto
 
 # Load Sources
 WORKDIR /usr/local/src
@@ -39,7 +40,7 @@ USER renderer
 
 # Configure stylesheet
 WORKDIR /usr/local/src/openstreetmap-carto
-RUN npm install -g carto && carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
+RUN carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
     python3 editmapnikconfig.py
 
 # Load shapefiles
