@@ -9,18 +9,14 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-ENV CARTO_VERSION=v5.2.0
+ENV CARTO_VERSION=v5.3.0
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     adduser --disabled-password --gecos "" renderer
 
-RUN apt update && apt-get -y upgrade && apt-get -y install curl systemd \ 
-    autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev \
-    libgeos++-dev libproj-dev gdal-bin \
-    libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono \
-    fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 \
-    libgdal-dev default-libmysqlclient-dev python3-mapnik \
-    python3-lxml sudo && rm -rf /var/lib/apt/lists/* && \
+RUN apt-get --quiet update && \
+    apt-get -y --quiet install curl systemd autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 libgdal-dev default-libmysqlclient-dev python3-mapnik python3-lxml sudo && \
+    rm -rf /var/lib/apt/lists/* && \
     npm install -g carto
 
 # Load Sources
