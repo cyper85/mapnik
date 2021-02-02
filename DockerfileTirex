@@ -9,7 +9,7 @@ ENV POSTGRES_PASSWORD=""
 ENV POSTGRES_HOST=localhost
 ENV POSTGRES_PORT=5432
 
-ENV CARTO_VERSION=v5.2.0
+ENV CARTO_VERSION=v5.3.0
 
 USER root
 RUN adduser --disabled-password --gecos "" tirex && \
@@ -17,7 +17,6 @@ RUN adduser --disabled-password --gecos "" tirex && \
 
 WORKDIR /usr/local/src
 RUN apt update && \
-    apt-get -y upgrade && \
     apt-get -y install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl && \
     npm install -g carto
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
