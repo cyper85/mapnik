@@ -15,7 +15,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
     adduser --disabled-password --gecos "" renderer
 
 RUN apt-get --quiet update && \
-    apt-get -y --quiet install curl systemd autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 libgdal-dev default-libmysqlclient-dev python3-mapnik python3-lxml python3-psycopg2 python3-requests python3-yaml sudo && \
+    apt-get -y --quiet install curl systemd autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils git fonts-noto-cjk fonts-hanazono fonts-noto-hinted fonts-noto-unhinted ttf-unifont nodejs npm apache2 libgdal-dev default-libmysqlclient-dev python3-mapnik python3-lxml sudo && \
     rm -rf /var/lib/apt/lists/* && \
     npm install -g carto
 
@@ -38,10 +38,6 @@ USER renderer
 WORKDIR /usr/local/src/openstreetmap-carto
 RUN carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
     python3 editmapnikconfig.py
-
-# Load shapefiles
-WORKDIR /usr/local/src/openstreetmap-carto
-RUN scripts/get-external-data.py
 
 # Configure renderd
 USER root

@@ -17,7 +17,7 @@ RUN adduser --disabled-password --gecos "" tirex && \
 
 WORKDIR /usr/local/src
 RUN apt-get update && \
-    apt-get -y --quiet install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl python3-psycopg2 python3-requests python3-yaml && \
+    apt-get -y --quiet install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl && \
     npm install -g carto
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
@@ -26,7 +26,6 @@ RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/
 WORKDIR /usr/local/src/openstreetmap-carto
 COPY editmapnikconfig.py /usr/local/src/openstreetmap-carto/
 RUN carto project.mml > mapnik.xml && \
-    python3 scripts/get-external-data.py && \
     python3 editmapnikconfig.py
 
 WORKDIR /usr/local/src/mod_tile
