@@ -3,6 +3,7 @@ services:
 
 install:
   - docker build -t cyper85/mapnik -f Dockerfile .
+  - docker build -t cyper85/mapnik:tirex -f DockerfileTirex .
   - docker run -d --name mapnikNormal cyper85/mapnik
 
 script:
