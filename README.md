@@ -3,7 +3,7 @@
 See also [Docker-Hub: cyper85/mapnik](https://hub.docker.com/r/cyper85/mapnik)
 
 ## Installation
-You need a [PostGIS-Container](https://github.com/postgis/postgis) and an [osm2pgsql-Container](https://github.com/cyper85/osm2pgsql).
+You need a [PostGIS-Container](https://github.com/postgis/docker-postgis) and an [osm2pgsql-Container](https://github.com/cyper85/osm2pgsql).
 
 ```bash
 # Create a Network to use the Postgis-Server in an other container
