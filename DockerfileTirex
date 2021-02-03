@@ -17,7 +17,7 @@ RUN adduser --disabled-password --gecos "" tirex && \
 
 WORKDIR /usr/local/src
 RUN apt-get update && \
-    apt-get -y --quiet install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl && \
+    apt-get -y --quiet install curl git make systemd python3-distutils mapnik-utils nodejs npm libmapnik-dev apache2-dev apache2 fonts-noto-* ttf-unifont fonts-hanazono python3-lxml devscripts libjson-perl libipc-sharelite-perl libgd-perl sudo && \
     npm install -g carto
 RUN git clone --depth 1 --branch $CARTO_VERSION https://github.com/gravitystorm/openstreetmap-carto.git && \
     git clone https://github.com/openstreetmap/mod_tile.git && \
@@ -40,7 +40,10 @@ RUN make && make deb && \
 RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
 
-RUN mkdir /var/lib/mod_tile && chown tirex:tirex /var/lib/mod_tile && \
+RUN mkdir /var/lib/mod_tile && \
+    mkdir -p /var/cache/renderd/tiles && \
+    chown -R tirex:tirex /usr/local/src/openstreetmap-carto && \
+    chown tirex:tirex /var/lib/mod_tile && \
     echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
     a2enconf mod_tile
 COPY apacheTirex.conf /etc/apache2/sites-available/000-default.conf
@@ -51,11 +54,12 @@ COPY runTirex.sh /
 
 USER root
 RUN chmod a+x /runTirex.sh && \
+    systemctl enable apache2 && \
     service apache2 restart && \
     service tirex-backend-manager restart && \
     service tirex-master restart
 
-#USER renderer
+USER tirex
 ENTRYPOINT ["/runTirex.sh"]
 CMD []
 

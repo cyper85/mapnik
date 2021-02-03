@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Initialize PostgreSQL and Apache
-service apache2 restart
-service tirex-backend-manager restart
-service tirex-master restart
+sudo -u tirex service tirex-backend-manager start
+sudo -u tirex service tirex-master start
 
-cd /usr/local/src/openstreetmap-carto
+cd /usr/local/src/openstreetmap-carto || exit 1
 python3 editmapnikconfig.py
 
-exit 0
+sudo -u tirex tirex-master --debug
