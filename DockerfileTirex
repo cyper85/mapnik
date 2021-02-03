@@ -41,6 +41,7 @@ RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=
 COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
 
 RUN mkdir /var/lib/mod_tile && \
+    ln -s /var/lib/tirex/tiles /var/lib/mod_tile && \
     mkdir -p /var/cache/renderd/tiles && \
     chown -R tirex:tirex /usr/local/src/openstreetmap-carto && \
     chown tirex:tirex /var/lib/mod_tile && \
@@ -59,7 +60,7 @@ RUN chmod a+x /runTirex.sh && \
     service tirex-backend-manager restart && \
     service tirex-master restart
 
-USER tirex
+#USER tirex
 ENTRYPOINT ["/runTirex.sh"]
 CMD []
 
