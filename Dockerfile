@@ -46,7 +46,8 @@ RUN MAPNIKPLUGIN=`mapnik-config --input-plugins` && \
     -e 's#^plugins_dir=.*$#plugins_dir='$MAPNIKPLUGIN'#' \
     -e 's/renderaccount/renderer/g' -e 's/hot/tile/g' \
     -e 's#^XML=.*$#XML=/usr/local/src/openstreetmap-carto/mapnik.xml#g' \
-    -e 's#^URI=.*$#URI=/tile/#' /usr/local/etc/renderd.conf && \
+    -e 's#^URI=.*$#URI=/tile/#' \
+    -e 's#^;.*$##' /usr/local/etc/renderd.conf && \
     sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /usr/local/etc/renderd.conf
 
 USER renderer

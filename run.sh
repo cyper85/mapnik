@@ -3,7 +3,7 @@
 # Initialize PostgreSQL and Apache
 service apache2 restart
 
-cd /usr/local/src/openstreetmap-carto
+cd /usr/local/src/openstreetmap-carto || exit 1
 python3 editmapnikconfig.py
 
 # Configure renderd threads
