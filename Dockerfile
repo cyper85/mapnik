@@ -41,6 +41,7 @@ RUN carto project.mml > mapnik.xml && cp mapnik.xml mapnik.bak.xml && \
 
 # Configure renderd
 USER root
+COPY renderd.conf /usr/local/etc/renderd.conf
 RUN MAPNIKPLUGIN=`mapnik-config --input-plugins` && \
     sed -i -e 's#\[default\]$#[default]\nMAXZOOM=20#' \
     -e 's#^plugins_dir=.*$#plugins_dir='$MAPNIKPLUGIN'#' \
