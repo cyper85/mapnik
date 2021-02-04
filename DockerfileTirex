@@ -40,7 +40,7 @@ RUN make && make deb && \
 RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
 COPY tirex.conf /etc/tirex/renderer/mapnik/osm.conf
 
-RUN mkdir /var/lib/mod_tile && \
+RUN mkdir --parents /var/lib/mod_tile /var/cache/renderd && \
     ln --symbolic /var/lib/tirex/tiles /var/lib/mod_tile && \
     ln --symbolic /var/lib/mod_tile /var/cache/renderd/tiles && \
     chown -R tirex:tirex /usr/local/src/openstreetmap-carto && \
