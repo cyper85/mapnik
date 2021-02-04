@@ -38,10 +38,11 @@ RUN make && make deb && \
     dpkg -i ../tirex-backend-wms*.deb && \
     dpkg -i ../tirex-example-map*.deb 
 RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=0/fontdir_recurse=1/' /etc/tirex/renderer/mapnik.conf
-COPY osm.conf /etc/tirex/renderer/mapnik/osm.conf
+COPY tirex.conf /etc/tirex/renderer/mapnik/osm.conf
 
 RUN mkdir /var/lib/mod_tile && \
     ln -s /var/lib/tirex/tiles /var/lib/mod_tile && \
+    ln -s /var/cache/renderd/tiles /var/lib/mod_tile && \
     mkdir -p /var/cache/renderd/tiles && \
     chown -R tirex:tirex /usr/local/src/openstreetmap-carto && \
     chown tirex:tirex /var/lib/mod_tile && \
