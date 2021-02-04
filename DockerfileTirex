@@ -41,10 +41,8 @@ RUN sed -i -e 's#^fontdir=.*$#fontdir=/usr/share/fonts#' -e 's/#fontdir_recurse=
 COPY tirex.conf /etc/tirex/renderer/mapnik/osm.conf
 
 RUN mkdir /var/lib/mod_tile && \
-
-    ln -s /var/lib/tirex/tiles /var/lib/mod_tile && \
-    ln -s /var/lib/mod_tile /var/cache/renderd/tiles && \
-    mkdir -p /var/cache/renderd/tiles && \
+    ln --symbolic /var/lib/tirex/tiles /var/lib/mod_tile && \
+    ln --symbolic /var/lib/mod_tile /var/cache/renderd/tiles && \
     chown -R tirex:tirex /usr/local/src/openstreetmap-carto && \
     chown tirex:tirex /var/lib/mod_tile && \
     echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf && \
