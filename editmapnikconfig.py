@@ -2,6 +2,10 @@
 
 from lxml import etree
 import os
+import sys
+
+# Pfad zur Mapnik-Config (Default: mapnik.xml im aktuellen Verzeichnis)
+xmlfile = sys.argv[1] if len(sys.argv) > 1 else 'mapnik.xml'
 
 # Datenbank-Konfiguration laden
 dbhost = 'postgre'
@@ -22,7 +26,7 @@ if 'POSTGRES_DB' in os.environ:
 
 # Mapnik-Config einlesen
 parser = etree.XMLParser(strip_cdata=False)
-root = etree.parse('mapnik.xml', parser)
+root = etree.parse(xmlfile, parser)
 
 # Datenbank-Config überall eintragen
 for datasource in root.findall('.//Datasource'):
@@ -63,7 +67,7 @@ for datasource in root.findall('.//Datasource'):
         parameter.set('name', 'password')
         parameter.text = etree.CDATA(dbpass)
 
-root.write('mapnik.xml')
+root.write(xmlfile)
 # Zurückschreiben
 
 #for fruit in tree.xpath('//fruit'):

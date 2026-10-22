@@ -1,0 +1,41 @@
+FROM ubuntu:26.04
+
+ENV TZ=Etc/UTC
+ARG DEBIAN_FRONTEND=noninteractive
+# Seiten, auf denen die Karte eingebunden werden darf (inkl. Subdomains), leer = alle
+ENV ALLOWED_DOMAINS="stadtplan-ilmenau.de map4jena.de map4erfurt.de stadtplan-arnstadt.de"
+# 1 = Anfragen ohne Referer erlauben (z.B. QGIS, JOSM), umgeht aber die Domain-Sperre
+ENV ALLOW_EMPTY_REFERER=0
+# Reverse-Proxys (IPs/Netze), deren X-Forwarded-For-Header vertraut wird
+ENV TRUSTED_PROXIES="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
+# Drosselung pro Client-IP als Token-Bucket: "<Größe> <Nachfüllrate pro Sekunde>"
+# für ausgelieferte Tiles und für Tiles, die neu gerendert werden müssen
+ENV THROTTLE_TILES="10000 10"
+ENV THROTTLE_RENDERS="1000 2"
+
+# Nur Apache + mod_tile, renderd läuft im eigenen Container
+RUN apt-get --quiet update && \
+    apt-get --yes --quiet --no-install-recommends install apache2 libapache2-mod-tile && \
+    rm --recursive --force /var/lib/apt/lists/*
+
+# mod_tile, mod_remoteip, mod_headers und mod_rewrite aktivieren, Logs auf stdout/stderr umleiten
+COPY apache-security.conf /etc/apache2/conf-available/tile-security.conf
+RUN test -f /etc/apache2/mods-available/tile.load || \
+        echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" > /etc/apache2/mods-available/tile.load && \
+    a2enmod tile remoteip headers rewrite && \
+    a2enconf tile-security && \
+    ln --symbolic --force /dev/stdout /var/log/apache2/access.log && \
+    ln --symbolic --force /dev/stdout /var/log/apache2/other_vhosts_access.log && \
+    ln --symbolic --force /dev/stderr /var/log/apache2/error.log
+# /run/renderd und /var/cache/renderd/tiles bewusst NICHT anlegen: Docker würde sonst beim ersten
+# Mount eines leeren Volumes den Besitzer (root) aus diesem Image übernehmen und renderd aussperren
+
+# mod_tile braucht die Layer-Definitionen (URI, TILEDIR, ...) aus der renderd.conf
+COPY renderd.conf /etc/renderd.conf
+COPY apache.conf /etc/apache2/sites-available/000-default.conf
+COPY apache-foreground.sh /usr/local/bin/apache-foreground.sh
+RUN chmod a+x /usr/local/bin/apache-foreground.sh
+
+EXPOSE 80
+STOPSIGNAL SIGWINCH
+CMD ["/usr/local/bin/apache-foreground.sh"]

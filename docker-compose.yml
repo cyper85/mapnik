@@ -1,0 +1,75 @@
+services:
+  import:
+    build:
+      context: .
+      dockerfile: Dockerfile.import
+    environment:
+      PBF_URL: ${PBF_URL:-https://download.geofabrik.de/europe/germany/thueringen-latest.osm.pbf}
+      POSTGRES_HOST: ${POSTGRES_HOST:-test-postgis}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      OSM2PGSQL_CACHE: ${OSM2PGSQL_CACHE:-2000}
+      THREADS: ${THREADS:-4}
+      FORCE_IMPORT: ${FORCE_IMPORT:-0}
+      # täglich nach einer neuen PBF suchen
+      UPDATE_INTERVAL: ${UPDATE_INTERVAL:-86400}
+    volumes:
+      - osm-data:/data
+      # nach einem Import werden die vorhandenen Tiles als veraltet markiert
+      - tiles:/var/cache/renderd/tiles
+    restart: unless-stopped
+
+  renderd:
+    build:
+      context: .
+      dockerfile: Dockerfile.renderd
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-test-postgis}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      THREADS: ${THREADS:-4}
+    volumes:
+      - tiles:/var/cache/renderd/tiles
+      - renderd-socket:/run/renderd
+    # renderd wartet selbst, bis der erste Import produktiv ist
+    depends_on:
+      - import
+    restart: unless-stopped
+
+  apache:
+    build:
+      context: .
+      dockerfile: Dockerfile.apache
+    environment:
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:-stadtplan-ilmenau.de map4jena.de map4erfurt.de stadtplan-arnstadt.de}
+      ALLOW_EMPTY_REFERER: ${ALLOW_EMPTY_REFERER:-0}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+      THROTTLE_TILES: ${THROTTLE_TILES:-10000 10}
+      THROTTLE_RENDERS: ${THROTTLE_RENDERS:-1000 2}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      # mod_tile liefert vorhandene Tiles direkt aus und fragt renderd nur per Socket
+      - tiles:/var/cache/renderd/tiles:ro
+      - renderd-socket:/run/renderd
+    depends_on:
+      - renderd
+    restart: unless-stopped
+
+volumes:
+  osm-data:
+  tiles:
+  renderd-socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+# PostGIS läuft im Netzwerk aus der README (docker network create postgis-net)
+networks:
+  default:
+    name: postgis-net
+    external: true

@@ -2,12 +2,18 @@ services:
   - docker
 
 install:
-  - docker build -t cyper85/mapnik -f Dockerfile .
+  - docker build -t cyper85/mapnik:renderd -f Dockerfile.renderd .
+  - docker build -t cyper85/mapnik:apache -f Dockerfile.apache .
+  - docker build -t cyper85/mapnik:import -f Dockerfile.import .
   - docker build -t cyper85/mapnik:tirex -f DockerfileTirex .
-  - docker run -d --name mapnikNormal cyper85/mapnik
+  - docker volume create renderd-socket
+  - docker volume create tiles
+  - docker run -d --name mapnikRenderd -v renderd-socket:/run/renderd -v tiles:/var/cache/renderd/tiles cyper85/mapnik:renderd
+  - docker run -d --name mapnikApache -v renderd-socket:/run/renderd -v tiles:/var/cache/renderd/tiles:ro cyper85/mapnik:apache
 
 script:
-  - docker ps | grep -q mapnikNormal
+  - docker ps | grep -q mapnikRenderd
+  - docker ps | grep -q mapnikApache
 
 after_script:
   - docker images

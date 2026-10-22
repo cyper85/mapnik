@@ -1,0 +1,37 @@
+FROM ubuntu:26.04
+
+ENV TZ=Etc/UTC
+ARG DEBIAN_FRONTEND=noninteractive
+ENV POSTGRES_DB=postgres
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=""
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
+# URL der zu importierenden PBF-Datei, z.B. https://download.geofabrik.de/europe/germany/thueringen-latest.osm.pbf
+ENV PBF_URL=""
+# Cache von osm2pgsql in MB
+ENV OSM2PGSQL_CACHE=2000
+ENV THREADS=4
+# Importiert wird nur, wenn sich die PBF seit dem letzten Import geändert hat, 1 = trotzdem importieren
+ENV FORCE_IMPORT=0
+# Abstand in Sekunden, in dem nach einer neuen PBF gesucht wird, 0 = nur einmal prüfen und beenden
+ENV UPDATE_INTERVAL=0
+
+# osm2pgsql + Import-Style (openstreetmap-carto.style/.lua, indexes.sql) aus dem Carto-Paket
+RUN apt-get --quiet update && \
+    apt-get --yes --quiet --no-install-recommends install osm2pgsql openstreetmap-carto-common postgresql-client curl ca-certificates && \
+    rm --recursive --force /var/lib/apt/lists/*
+
+# functions.sql fehlt im Ubuntu-Paket, wird vom Style aber benötigt -> passend zur Paketversion nachladen
+RUN version="$(dpkg-query --show --showformat='${Version}' openstreetmap-carto-common | cut --delimiter=- --fields=1)" && \
+    curl --fail --silent --show-error --location \
+        --output /usr/share/openstreetmap-carto-common/functions.sql \
+        "https://raw.githubusercontent.com/gravitystorm/openstreetmap-carto/v${version}/functions.sql"
+
+COPY import-entrypoint.sh /usr/local/bin/import-entrypoint.sh
+RUN chmod a+x /usr/local/bin/import-entrypoint.sh
+
+# Heruntergeladene PBF-Dateien
+VOLUME /data
+
+ENTRYPOINT ["/usr/local/bin/import-entrypoint.sh"]
