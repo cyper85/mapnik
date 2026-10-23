@@ -1,3 +1,28 @@
+# CyclOSM gibt es nicht als Paket: Quellen laden und mit carto in ein Mapnik-Stylesheet übersetzen.
+# Eigene Build-Stufe, damit Node.js und carto nicht im fertigen Image landen
+FROM ubuntu:26.04 AS cyclosm
+
+ARG DEBIAN_FRONTEND=noninteractive
+# Version muss zu Dockerfile.import passen (Views und Spalten in der Datenbank), Renovate aktualisiert beide gemeinsam
+# renovate: datasource=github-tags depName=cyclosm/cyclosm-cartocss-style
+ARG CYCLOSM_VERSION=v0.7.1
+
+RUN apt-get --quiet update && \
+    apt-get --yes --quiet --no-install-recommends install ca-certificates curl nodejs npm python3-yaml && \
+    rm --recursive --force /var/lib/apt/lists/* && \
+    npm install --global carto
+
+# Shapefiles (Landflächen) lädt renderd-entrypoint.sh beim Start nach /var/lib/cyclosm
+COPY cyclosm-prepare.py /usr/local/bin/cyclosm-prepare.py
+WORKDIR /usr/local/share/cyclosm
+RUN curl --fail --silent --show-error --location \
+        "https://github.com/cyclosm/cyclosm-cartocss-style/archive/refs/tags/${CYCLOSM_VERSION}.tar.gz" \
+        | tar --extract --gzip --strip-components=1 && \
+    python3 /usr/local/bin/cyclosm-prepare.py project.mml renderd.mml /var/lib/cyclosm shapefiles.txt && \
+    carto renderd.mml > cyclosm.xml && \
+    test -s cyclosm.xml && test -s shapefiles.txt
+
+
 FROM ubuntu:26.04
 
 ENV TZ=Etc/UTC
@@ -12,24 +37,31 @@ ENV THREADS=4
 ENV RENDERD_USER=_renderd
 
 RUN apt-get --quiet update && \
-    apt-get --yes --quiet install renderd openstreetmap-carto python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
+    apt-get --yes --quiet install renderd openstreetmap-carto curl python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-dejavu-core fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
     rm --recursive --force /var/lib/apt/lists/*
 
-# Configure renderd: Mapnik-Plugin-Verzeichnis ermitteln, Stylesheet prüfen und das Original sichern
-# (renderd-entrypoint.sh erzeugt daraus bei jedem Start das Stylesheet mit den DB-Zugangsdaten)
+# Stylesheet und Symbole von CyclOSM
+COPY --from=cyclosm /usr/local/share/cyclosm /usr/local/share/cyclosm
+
+# Configure renderd: Mapnik-Plugin-Verzeichnis ermitteln, Stylesheets prüfen und die Originale sichern
+# (renderd-entrypoint.sh erzeugt daraus bei jedem Start die Konfiguration und die Stylesheets mit den DB-Zugangsdaten)
 COPY renderd.conf /etc/renderd.conf
 RUN plugins="$(find /usr/lib -type d -path '*/mapnik/*/input' | head --lines=1)" && \
     test -n "$plugins" && \
     sed --in-place "s#^plugins_dir=.*\$#plugins_dir=${plugins}#" /etc/renderd.conf && \
-    xml="$(sed --quiet 's/^XML=//p' /etc/renderd.conf)" && \
-    test -f "$xml" && \
-    cp "$xml" "$xml.orig" && \
+    cp /etc/renderd.conf /etc/renderd.conf.orig && \
+    for xml in $(sed --quiet 's/^XML=//p' /etc/renderd.conf); do \
+        test -f "$xml" && cp "$xml" "$xml.orig" || exit 1; \
+    done && \
     id "$RENDERD_USER" && \
-    mkdir --parents /run/renderd /var/cache/renderd/tiles && \
+    mkdir --parents /run/renderd /var/cache/renderd/tiles /var/lib/cyclosm && \
     chown "$RENDERD_USER": /run/renderd /var/cache/renderd/tiles
 
 COPY editmapnikconfig.py /usr/local/bin/editmapnikconfig.py
 COPY renderd-entrypoint.sh /usr/local/bin/renderd-entrypoint.sh
 RUN chmod a+x /usr/local/bin/editmapnikconfig.py /usr/local/bin/renderd-entrypoint.sh
+
+# Heruntergeladene Shapefiles für CyclOSM
+VOLUME /var/lib/cyclosm
 
 ENTRYPOINT ["/usr/local/bin/renderd-entrypoint.sh"]

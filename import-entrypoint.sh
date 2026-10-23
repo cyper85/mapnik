@@ -8,6 +8,7 @@ fi
 
 export PGHOST="$POSTGRES_HOST" PGPORT="$POSTGRES_PORT" PGDATABASE="$POSTGRES_DB" PGUSER="$POSTGRES_USER" PGPASSWORD="$POSTGRES_PASSWORD"
 CARTO=/usr/share/openstreetmap-carto-common
+CYCLOSM=/usr/local/share/cyclosm
 PBF="/data/$(basename "${PBF_URL%%\?*}")"
 TILE_DIR=/var/cache/renderd/tiles
 # Neuer Import landet erst in IMPORT_SCHEMA, die bisherigen Tabellen kurz vor dem Löschen in OLD_SCHEMA
@@ -33,7 +34,9 @@ import_if_new() {
     # Nur importieren, wenn sich die PBF seit dem letzten Import geändert hat
     signature="$PBF_URL $(stat --format='%s %Y' "$PBF")"
     imported="$(psql --tuples-only --no-align --command "SELECT pbf_signature FROM mapnik_import" 2>/dev/null || true)"
-    if [ "$FORCE_IMPORT" != "1" ] && [ "$signature" = "$imported" ]; then
+    # Datenbanken aus älteren Versionen fehlen die Spalten und Views für CyclOSM -> einmal neu importieren
+    cyclosm="$(psql --tuples-only --no-align --command "SELECT to_regclass('public.cyclosm_ways') IS NOT NULL" || true)"
+    if [ "$FORCE_IMPORT" != "1" ] && [ "$signature" = "$imported" ] && [ "$cyclosm" = "t" ]; then
         echo "PBF unverändert seit dem letzten Import, nichts zu tun"
         return
     fi
@@ -54,11 +57,15 @@ SQL
         --cache "$OSM2PGSQL_CACHE" --number-processes "$THREADS" \
         "$PBF"
 
+    # client_min_messages: keine NOTICE für jede schon vorhandene Spalte
+    PGOPTIONS="-c search_path=$IMPORT_SCHEMA,public -c client_min_messages=warning" \
+        psql --quiet --set ON_ERROR_STOP=1 --file "$CYCLOSM/columns.sql"
     PGOPTIONS="-c search_path=$IMPORT_SCHEMA,public" psql --quiet --set ON_ERROR_STOP=1 --file "$CARTO/indexes.sql"
     psql --quiet --set ON_ERROR_STOP=1 --file "$CARTO/functions.sql"
 
     # Produktivnahme: alle importierten Tabellen in einer Transaktion gegen die bisherigen tauschen.
-    # Andere Tabellen in public (externe Daten von get-external-data.py) bleiben unberührt.
+    # Andere Tabellen in public (externe Daten von get-external-data.py) bleiben unberührt,
+    # die Views von CyclOSM werden in derselben Transaktion neu angelegt.
     echo "Schalte neue Daten produktiv ..."
     psql --quiet --set ON_ERROR_STOP=1 --set signature="$signature" <<SQL
 BEGIN;
@@ -75,6 +82,8 @@ BEGIN
     END LOOP;
 END
 \$\$;
+-- Die CyclOSM-Views sind mit den alten Tabellen umgezogen, auf den neuen Tabellen neu anlegen
+\i $CYCLOSM/views.sql
 CREATE TABLE IF NOT EXISTS mapnik_import (id int PRIMARY KEY DEFAULT 1 CHECK (id = 1), pbf_signature text, imported_at timestamptz);
 INSERT INTO mapnik_import (pbf_signature, imported_at) VALUES (:'signature', now())
     ON CONFLICT (id) DO UPDATE SET pbf_signature = EXCLUDED.pbf_signature, imported_at = EXCLUDED.imported_at;

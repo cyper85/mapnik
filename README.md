@@ -1,7 +1,8 @@
 # Mapnik-Tile-Server
 
-Ein OpenStreetMap-Tile-Server auf Basis von [openstreetmap-carto](https://github.com/gravitystorm/openstreetmap-carto),
-aufgeteilt in drei Container, die jeweils genau einen Prozess im Vordergrund ausführen.
+Ein OpenStreetMap-Tile-Server mit zwei Kartenstilen, [openstreetmap-carto](https://github.com/gravitystorm/openstreetmap-carto)
+und [CyclOSM](https://github.com/cyclosm/cyclosm-cartocss-style), aufgeteilt in drei Container, die jeweils genau
+einen Prozess im Vordergrund ausführen. Beide Stile nutzen dieselbe Datenbank.
 
 Siehe auch [Docker-Hub: cyper85/mapnik](https://hub.docker.com/r/cyper85/mapnik).
 
@@ -35,8 +36,8 @@ Siehe auch [Docker-Hub: cyper85/mapnik](https://hub.docker.com/r/cyper85/mapnik)
 | Container | Image | Aufgabe |
 |---|---|---|
 | `import` | `Dockerfile.import` | Lädt eine PBF-Datei herunter und importiert sie mit osm2pgsql, sobald sie sich geändert hat |
-| `renderd` | `Dockerfile.renderd` | Rendert Tiles mit Mapnik und dem openstreetmap-carto-Stil |
-| `apache` | `Dockerfile.apache` | Liefert Tiles unter `/tile/{z}/{x}/{y}.png` aus und beauftragt renderd bei fehlenden Tiles |
+| `renderd` | `Dockerfile.renderd` | Rendert Tiles mit Mapnik in den Stilen openstreetmap-carto und CyclOSM |
+| `apache` | `Dockerfile.apache` | Liefert Tiles unter `/tile/{z}/{x}/{y}.png` (openstreetmap-carto) und `/cyclosm/{z}/{x}/{y}.png` (CyclOSM) aus und beauftragt renderd bei fehlenden Tiles |
 
 Die Datenbank (PostGIS) gehört nicht zum Projekt und läuft in einem eigenen Container.
 
@@ -74,7 +75,7 @@ Beim ersten Start passiert Folgendes:
 
 1. `import` lädt die PBF herunter und importiert sie (Thüringen: ca. 5 Minuten, Deutschland: mehrere Stunden).
 2. `renderd` wartet, bis der Import abgeschlossen ist, lädt dann die externen Daten (Wasserflächen,
-   Grenzen) in die Datenbank und startet.
+   Grenzen) in die Datenbank, für CyclOSM die Landflächen (ca. 1 GB) ins Volume `cyclosm-data` und startet.
 3. `apache` ist sofort erreichbar. Bis renderd läuft, werden fehlende Tiles mit 404 beantwortet.
 
 Fortschritt verfolgen:
@@ -89,6 +90,7 @@ docker compose logs --follow import renderd
 # Gemeinsame Volumes: Socket zwischen apache und renderd, Tile-Cache für alle drei
 docker volume create renderd-socket
 docker volume create tiles
+docker volume create cyclosm-data
 
 # Import (mit UPDATE_INTERVAL=0 einmalig, danach beendet sich der Container)
 docker run --detach --name mapnik-import --network postgis-net \
@@ -102,6 +104,7 @@ docker run --detach --name mapnik-import --network postgis-net \
 docker run --detach --name mapnik-renderd --network postgis-net \
     --env POSTGRES_HOST=test-postgis --env POSTGRES_PASSWORD=geheim \
     --volume renderd-socket:/run/renderd --volume tiles:/var/cache/renderd/tiles \
+    --volume cyclosm-data:/var/lib/cyclosm \
     cyper85/mapnik:renderd
 
 # Webserver
@@ -115,17 +118,29 @@ die fertigen Tiles liest Apache aber direkt aus dem Tile-Volume.
 
 ## Karte einbinden
 
-Die Tiles stehen unter `https://<dein-tile-server>/tile/{z}/{x}/{y}.png` bereit, Zoomstufen 0 bis 20.
-Beispiel mit [Leaflet](https://leafletjs.com/):
+Die Tiles stehen in Zoomstufen 0 bis 20 bereit:
+
+| Stil | URL |
+|---|---|
+| openstreetmap-carto | `https://<dein-tile-server>/tile/{z}/{x}/{y}.png` |
+| CyclOSM | `https://<dein-tile-server>/cyclosm/{z}/{x}/{y}.png` |
+
+Beispiel mit [Leaflet](https://leafletjs.com/), beide Stile zum Umschalten:
 
 ```html
 <div id="karte" style="height: 500px"></div>
 <script>
-  const karte = L.map('karte').setView([50.686, 10.914], 14);
-  L.tileLayer('https://tile.stadtplan-ilmenau.de/tile/{z}/{x}/{y}.png', {
+  const osm = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende';
+  const standard = L.tileLayer('https://tile.stadtplan-ilmenau.de/tile/{z}/{x}/{y}.png', {
     maxZoom: 20,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
-  }).addTo(karte);
+    attribution: osm
+  });
+  const cyclosm = L.tileLayer('https://tile.stadtplan-ilmenau.de/cyclosm/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: 'Stil: <a href="https://www.cyclosm.org">CyclOSM</a> | ' + osm
+  });
+  const karte = L.map('karte', { layers: [standard] }).setView([50.686, 10.914], 14);
+  L.control.layers({ 'Standard': standard, 'Fahrrad (CyclOSM)': cyclosm }).addTo(karte);
 </script>
 ```
 
@@ -206,7 +221,8 @@ Mit Docker Compose prüft `import` täglich, ob es eine neue PBF gibt. Ist das d
 
 1. Die PBF wird nur heruntergeladen, wenn sie auf dem Server neuer ist als die lokale Kopie.
 2. osm2pgsql importiert in das Schema `osm_import`, die produktiven Tabellen bleiben unberührt.
-3. Nach dem Import werden die neuen Tabellen in **einer Transaktion** gegen die alten getauscht.
+3. Nach dem Import werden die neuen Tabellen in **einer Transaktion** gegen die alten getauscht,
+   in derselben Transaktion werden die Views für CyclOSM neu angelegt.
 4. Alle vorhandenen Tiles werden als veraltet markiert. Besucher bekommen weiterhin sofort die alte Tile,
    im Hintergrund wird sie neu gerendert.
 
@@ -239,7 +255,7 @@ außerhalb der neuen sichtbar, bis sie neu gerendert werden.
 
 ```bash
 docker compose stop apache renderd
-docker compose run --rm --no-deps --entrypoint sh renderd -c 'rm -rf /var/cache/renderd/tiles/default'
+docker compose run --rm --no-deps --entrypoint sh renderd -c 'rm -rf /var/cache/renderd/tiles/default /var/cache/renderd/tiles/cyclosm'
 docker compose start renderd apache
 ```
 
@@ -259,6 +275,7 @@ docker compose logs --follow import    # Downloads und Importe
 |---|---|---|---|
 | `tiles` | `/var/cache/renderd/tiles` | apache (nur lesend), renderd, import | Gerenderte Metatiles |
 | `renderd-socket` | `/run/renderd` | apache, renderd | Unix-Socket von renderd (tmpfs) |
+| `cyclosm-data` | `/var/lib/cyclosm` | renderd | Landflächen-Shapefiles für CyclOSM, werden bei jedem Start auf Aktualität geprüft |
 | `osm-data` | `/data` | import | Heruntergeladene PBF-Dateien |
 
 ## Fehlersuche
@@ -270,9 +287,26 @@ docker compose logs --follow import    # Downloads und Importe
 | Fehlende Tiles liefern **404** | renderd läuft noch nicht (wartet auf Import oder Datenbank), siehe `docker compose logs renderd` |
 | renderd meldet `relation "water_polygons" does not exist` o.ä. | Die externen Daten konnten nicht geladen werden (`WARNUNG: get-external-data.py fehlgeschlagen`). Meist ist `osmdata.openstreetmap.de` nicht erreichbar. renderd neu starten, sobald der Server wieder erreichbar ist |
 | renderd meldet `function carto_... does not exist` | Die Datenbank wurde nicht mit diesem Import-Container befüllt. Einen Import mit `FORCE_IMPORT=1` ausführen, er spielt die Funktionen von openstreetmap-carto mit ein |
+| CyclOSM-Tiles liefern **404**, renderd meldet `CyclOSM deaktiviert` | Entweder fehlen die Landflächen (Download von `osmdata.openstreetmap.de` fehlgeschlagen) oder die Datenbank hat die CyclOSM-Views noch nicht. Die Views legt `import` an, bei Datenbanken aus älteren Versionen importiert er deshalb automatisch einmal neu. Danach renderd neu starten |
 | Import bricht mit `permission denied to create extension` ab | Der Datenbankbenutzer darf die Extensions `postgis` und `hstore` nicht anlegen. Einmalig als Superuser anlegen |
+
+## CyclOSM
+
+CyclOSM gibt es nicht als Ubuntu-Paket. `Dockerfile.renderd` lädt die Quellen in der Version `CYCLOSM_VERSION`
+und übersetzt sie mit [carto](https://github.com/mapbox/carto) in ein Mapnik-Stylesheet. Node.js wird nur
+dafür in einer eigenen Build-Stufe gebraucht, das fertige Image enthält es nicht. Höhenlinien, Schummerung und die
+anderen in CyclOSM standardmäßig abgeschalteten Layer werden dabei entfernt.
+
+CyclOSM erwartet eigentlich einen Import mit dem Standard-Style von osm2pgsql. Damit eine Datenbank für beide
+Stile reicht, ergänzt der Import die fehlenden Spalten als berechnete Spalten aus der hstore-Spalte `tags`
+(`cyclosm-columns.sql`) und legt die Views aus `views.sql` von CyclOSM an.
+
+`CYCLOSM_VERSION` steht in `Dockerfile.renderd` und `Dockerfile.import` und muss in beiden gleich sein.
+[Renovate](https://docs.renovatebot.com/) erkennt sie über den Kommentar `# renovate: ...` (siehe `renovate.json`)
+und aktualisiert beide in einem gemeinsamen Pull Request. Nach einem Versionswechsel einen Import mit
+`FORCE_IMPORT=1` ausführen, damit die Views der neuen Version angelegt werden.
 
 ## Tirex
 
-Neben renderd gibt es eine Variante mit [Tirex](https://wiki.openstreetmap.org/wiki/Tirex) und dem CyclOSM-Stil:
+Neben renderd gibt es eine ältere Variante mit [Tirex](https://wiki.openstreetmap.org/wiki/Tirex):
 `DockerfileTirex` bzw. das Image `cyper85/mapnik:tirex`.

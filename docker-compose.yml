@@ -35,6 +35,8 @@ services:
     volumes:
       - tiles:/var/cache/renderd/tiles
       - renderd-socket:/run/renderd
+      # Shapefiles für CyclOSM (Landflächen, ca. 1 GB)
+      - cyclosm-data:/var/lib/cyclosm
     # renderd wartet selbst, bis der erste Import produktiv ist
     depends_on:
       - import
@@ -63,6 +65,7 @@ services:
 volumes:
   osm-data:
   tiles:
+  cyclosm-data:
   renderd-socket:
     driver_opts:
       type: tmpfs

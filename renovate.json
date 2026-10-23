@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "description": "Versionen in Dockerfiles mit Kommentar '# renovate: datasource=... depName=...' direkt über ARG/ENV",
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)Dockerfile[^/]*$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>\\S+?)(?: versioning=(?<versioning>\\S+?))?\\s+(?:ARG|ENV) [A-Z0-9_]+=(?<currentValue>\\S+)"
+      ]
+    }
+  ]
+}

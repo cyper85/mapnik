@@ -28,6 +28,18 @@ RUN version="$(dpkg-query --show --showformat='${Version}' openstreetmap-carto-c
         --output /usr/share/openstreetmap-carto-common/functions.sql \
         "https://raw.githubusercontent.com/gravitystorm/openstreetmap-carto/v${version}/functions.sql"
 
+# Views und zusätzliche Spalten für den CyclOSM-Stil, Version muss zu Dockerfile.renderd passen
+# renovate: datasource=github-tags depName=cyclosm/cyclosm-cartocss-style
+ARG CYCLOSM_VERSION=v0.7.1
+RUN mkdir --parents /usr/local/share/cyclosm && \
+    curl --fail --silent --show-error --location \
+        --output /usr/local/share/cyclosm/views.sql \
+        "https://raw.githubusercontent.com/cyclosm/cyclosm-cartocss-style/${CYCLOSM_VERSION}/views.sql" && \
+    # "layer" ist im Import-Style von openstreetmap-carto eine Zahl, CyclOSM prüft es per Regex als Text
+    sed --in-place --regexp-extended 's/\blayer\s*~/layer::text ~/g' /usr/local/share/cyclosm/views.sql && \
+    grep --quiet 'layer::text ~' /usr/local/share/cyclosm/views.sql
+COPY cyclosm-columns.sql /usr/local/share/cyclosm/columns.sql
+
 COPY import-entrypoint.sh /usr/local/bin/import-entrypoint.sh
 RUN chmod a+x /usr/local/bin/import-entrypoint.sh
 
