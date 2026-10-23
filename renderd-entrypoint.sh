@@ -29,8 +29,8 @@ PGPASSWORD="$POSTGRES_PASSWORD" ./get-external-data.py \
     --database "$POSTGRES_DB" --username "$POSTGRES_USER" \
     || echo "WARNUNG: get-external-data.py fehlgeschlagen" >&2
 
-# Datenbank-Zugang ins Mapnik-Stylesheet eintragen
-python3 /usr/local/bin/editmapnikconfig.py "$XML"
+# Datenbank-Zugang ins Mapnik-Stylesheet eintragen, immer ausgehend vom unveränderten Original
+python3 /usr/local/bin/editmapnikconfig.py "$XML.orig" "$XML"
 
 # Configure renderd threads
 sed --in-place --regexp-extended "s/^num_threads=[0-9]+/num_threads=${THREADS:-4}/" "$RENDERD_CONF"

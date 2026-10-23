@@ -15,12 +15,15 @@ RUN apt-get --quiet update && \
     apt-get --yes --quiet install renderd openstreetmap-carto python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
     rm --recursive --force /var/lib/apt/lists/*
 
-# Configure renderd: Mapnik-Plugin-Verzeichnis ermitteln, Stylesheet prüfen
+# Configure renderd: Mapnik-Plugin-Verzeichnis ermitteln, Stylesheet prüfen und das Original sichern
+# (renderd-entrypoint.sh erzeugt daraus bei jedem Start das Stylesheet mit den DB-Zugangsdaten)
 COPY renderd.conf /etc/renderd.conf
 RUN plugins="$(find /usr/lib -type d -path '*/mapnik/*/input' | head --lines=1)" && \
     test -n "$plugins" && \
     sed --in-place "s#^plugins_dir=.*\$#plugins_dir=${plugins}#" /etc/renderd.conf && \
-    test -f "$(sed --quiet 's/^XML=//p' /etc/renderd.conf)" && \
+    xml="$(sed --quiet 's/^XML=//p' /etc/renderd.conf)" && \
+    test -f "$xml" && \
+    cp "$xml" "$xml.orig" && \
     id "$RENDERD_USER" && \
     mkdir --parents /run/renderd /var/cache/renderd/tiles && \
     chown "$RENDERD_USER": /run/renderd /var/cache/renderd/tiles

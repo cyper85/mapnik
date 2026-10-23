@@ -5,7 +5,9 @@ import os
 import sys
 
 # Pfad zur Mapnik-Config (Default: mapnik.xml im aktuellen Verzeichnis)
+# und optional ein abweichender Pfad für das Ergebnis
 xmlfile = sys.argv[1] if len(sys.argv) > 1 else 'mapnik.xml'
+outfile = sys.argv[2] if len(sys.argv) > 2 else xmlfile
 
 # Datenbank-Konfiguration laden
 dbhost = 'postgre'
@@ -67,8 +69,9 @@ for datasource in root.findall('.//Datasource'):
         parameter.set('name', 'password')
         parameter.text = etree.CDATA(dbpass)
 
-root.write(xmlfile)
-# Zurückschreiben
+# Zurückschreiben, unbedingt als UTF-8: ohne encoding schreibt lxml ASCII und ersetzt Sonderzeichen
+# durch Zeichenreferenzen, die in CDATA (z.B. Einbahn-Pfeil '🠖') wörtlich gerendert würden
+root.write(outfile, encoding='utf-8', xml_declaration=True)
 
 #for fruit in tree.xpath('//fruit'):
 #    fruit.text = 'rotten %s' % (fruit.text,)
