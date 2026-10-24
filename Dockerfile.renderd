@@ -37,7 +37,7 @@ ENV THREADS=4
 ENV RENDERD_USER=_renderd
 
 RUN apt-get --quiet update && \
-    apt-get --yes --quiet install renderd openstreetmap-carto curl python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-dejavu-core fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
+    apt-get --yes --quiet install renderd openstreetmap-carto curl mapnik-utils python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-dejavu-core fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
     rm --recursive --force /var/lib/apt/lists/*
 
 # Stylesheet und Symbole von CyclOSM

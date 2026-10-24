@@ -55,6 +55,12 @@ while read -r url shp; do
     if [ ! -f "$CYCLOSM_DATA/$shp" ]; then
         echo "WARNUNG: $CYCLOSM_DATA/$shp fehlt" >&2
         cyclosm=0
+    elif [ ! -f "$CYCLOSM_DATA/${shp%.shp}.index" ]; then
+        # Räumlicher Index, ohne ihn liest Mapnik bei jeder Metatile das ganze Shapefile
+        # (land_polygons.shp ca. 1 GB), das Rendern dauert dann länger als ModTileMissingRequestTimeout
+        echo "Erstelle Index für $shp ..."
+        shapeindex --shape_files "$CYCLOSM_DATA/$shp" >/dev/null \
+            || echo "WARNUNG: Index für $shp konnte nicht erstellt werden" >&2
     fi
 done < /usr/local/share/cyclosm/shapefiles.txt
 
