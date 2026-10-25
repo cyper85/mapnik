@@ -181,6 +181,7 @@ als im Image (Spalte „Compose“).
 | `TRUSTED_PROXIES` | `10.0.0.0/8 172.16.0.0/12 192.168.0.0/16` | Reverse-Proxys (IPs oder Netze), deren `X-Forwarded-For`-Header vertraut wird |
 | `THROTTLE_TILES` | `10000 10` | Drosselung pro Client-IP für ausgelieferte Tiles: Bucket-Größe und Nachfüllrate pro Sekunde |
 | `THROTTLE_RENDERS` | `1000 2` | Wie `THROTTLE_TILES`, aber nur für Tiles, die neu gerendert werden müssen |
+| `RENDER_TIMEOUT` | `180` | Sekunden, die Apache auf eine noch nicht vorhandene Tile wartet, danach **404**. Metatiles in niedrigen Zoomstufen (11, 12) brauchen beim ersten Rendern oft über eine Minute, danach liegen sie im Cache. Der Reverse-Proxy davor muss mindestens so lange warten |
 | `HTTP_PORT` | `80` | Nur Compose: Port, unter dem Apache auf dem Host erreichbar ist |
 
 ## Sicherheit
@@ -206,6 +207,8 @@ location / {
     proxy_pass http://mapnik-apache:80;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # Mindestens RENDER_TIMEOUT, der Standard von 60 Sekunden reicht für neue Tiles in niedrigen Zoomstufen nicht
+    proxy_read_timeout 180s;
 }
 ```
 
@@ -284,6 +287,7 @@ docker compose logs --follow import    # Downloads und Importe
 |---|---|
 | Alle Tiles liefern **403** | Die einbindende Seite steht nicht in `ALLOWED_DOMAINS`, oder der Browser sendet keinen `Referer` |
 | Tiles liefern **503** | Drosselung greift. Prüfen, ob der Proxy in `TRUSTED_PROXIES` steht. Sonst teilen sich alle Besucher die IP des Proxys und damit einen Bucket |
+| Neue Tiles in niedrigen Zoomstufen liefern **404**, renderd meldet `Failed to send render cmd` | Das Rendern dauerte länger als `RENDER_TIMEOUT`. renderd rendert trotzdem fertig, beim nächsten Abruf ist die Tile da. Sonst `RENDER_TIMEOUT` erhöhen. Liefert der Reverse-Proxy stattdessen **504**, dessen Timeout erhöhen |
 | Fehlende Tiles liefern **404** | renderd läuft noch nicht (wartet auf Import oder Datenbank), siehe `docker compose logs renderd` |
 | renderd meldet `relation "water_polygons" does not exist` o.ä. | Die externen Daten konnten nicht geladen werden (`WARNUNG: get-external-data.py fehlgeschlagen`). Meist ist `osmdata.openstreetmap.de` nicht erreichbar. renderd neu starten, sobald der Server wieder erreichbar ist |
 | renderd meldet `function carto_... does not exist` | Die Datenbank wurde nicht mit diesem Import-Container befüllt. Einen Import mit `FORCE_IMPORT=1` ausführen, er spielt die Funktionen von openstreetmap-carto mit ein |

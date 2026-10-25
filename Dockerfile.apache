@@ -12,6 +12,9 @@ ENV TRUSTED_PROXIES="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
 # für ausgelieferte Tiles und für Tiles, die neu gerendert werden müssen
 ENV THROTTLE_TILES="10000 10"
 ENV THROTTLE_RENDERS="1000 2"
+# Sekunden, die auf das Rendern einer noch nicht vorhandenen Tile gewartet wird, danach 404.
+# Metatiles in niedrigen Zoomstufen brauchen beim ersten Mal deutlich länger als 30 Sekunden
+ENV RENDER_TIMEOUT=180
 
 # Nur Apache + mod_tile, renderd läuft im eigenen Container
 RUN apt-get --quiet update && \
