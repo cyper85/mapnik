@@ -15,6 +15,8 @@ ENV THROTTLE_RENDERS="1000 2"
 # Sekunden, die auf das Rendern einer noch nicht vorhandenen Tile gewartet wird, danach 404.
 # Metatiles in niedrigen Zoomstufen brauchen beim ersten Mal deutlich länger als 30 Sekunden
 ENV RENDER_TIMEOUT=180
+# Sekunden, die Browser eine Tile cachen dürfen (7 Tage)
+ENV BROWSER_CACHE=604800
 
 # Nur Apache + mod_tile, renderd läuft im eigenen Container
 RUN apt-get --quiet update && \

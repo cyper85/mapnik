@@ -182,6 +182,7 @@ als im Image (Spalte „Compose“).
 | `THROTTLE_TILES` | `10000 10` | Drosselung pro Client-IP für ausgelieferte Tiles: Bucket-Größe und Nachfüllrate pro Sekunde |
 | `THROTTLE_RENDERS` | `1000 2` | Wie `THROTTLE_TILES`, aber nur für Tiles, die neu gerendert werden müssen |
 | `RENDER_TIMEOUT` | `180` | Sekunden, die Apache auf eine noch nicht vorhandene Tile wartet, danach **404**. Metatiles in niedrigen Zoomstufen (11, 12) brauchen beim ersten Rendern oft über eine Minute, danach liegen sie im Cache. Der Reverse-Proxy davor muss mindestens so lange warten |
+| `BROWSER_CACHE` | `604800` | Sekunden, die Browser eine Tile cachen dürfen (`Cache-Control: max-age`, Standard 7 Tage). Nach einem Import als veraltet markierte Tiles werden nur 15 Minuten gecacht. Neue Daten erscheinen bei Besuchern also spätestens nach dieser Zeit |
 | `HTTP_PORT` | `80` | Nur Compose: Port, unter dem Apache auf dem Host erreichbar ist |
 
 ## Sicherheit
