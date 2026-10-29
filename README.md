@@ -305,12 +305,35 @@ CyclOSM erwartet eigentlich einen Import mit dem Standard-Style von osm2pgsql. D
 Stile reicht, ergänzt der Import die fehlenden Spalten als berechnete Spalten aus der hstore-Spalte `tags`
 (`cyclosm-columns.sql`) und legt die Views aus `views.sql` von CyclOSM an.
 
-`CYCLOSM_VERSION` steht in `Dockerfile.renderd` und `Dockerfile.import` und muss in beiden gleich sein.
+`CYCLOSM_VERSION` steht in `Dockerfile.renderd`, `Dockerfile.tirex` und `Dockerfile.import` und muss überall gleich sein.
 [Renovate](https://docs.renovatebot.com/) erkennt sie über den Kommentar `# renovate: ...` (siehe `renovate.json`)
-und aktualisiert beide in einem gemeinsamen Pull Request. Nach einem Versionswechsel einen Import mit
+und aktualisiert alle in einem gemeinsamen Pull Request. Nach einem Versionswechsel einen Import mit
 `FORCE_IMPORT=1` ausführen, damit die Views der neuen Version angelegt werden.
 
 ## Tirex
 
-Neben renderd gibt es eine ältere Variante mit [Tirex](https://wiki.openstreetmap.org/wiki/Tirex):
-`DockerfileTirex` bzw. das Image `cyper85/mapnik:tirex`.
+Statt renderd kann [Tirex](https://wiki.openstreetmap.org/wiki/Tirex) rendern: `Dockerfile.tirex` bzw. das Image
+`cyper85/mapnik:tirex`. Der Container ist ein Ersatz für `renderd` mit denselben Umgebungsvariablen und Volumes,
+denselben Kartenstilen und demselben Tile-Cache. Tirex lauscht auf demselben Socket `/run/renderd/renderd.sock`,
+der Apache-Container bindet ihn also unverändert ein.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tirex.yml up --detach --build
+```
+
+`docker-compose.tirex.yml` ersetzt den Service `renderd` durch `tirex`, es darf immer nur einer von beiden laufen.
+Ohne Docker Compose wie bei renderd starten, nur mit dem Image `cyper85/mapnik:tirex`.
+
+Unterschiede zu renderd:
+
+- Tirex besteht aus zwei Prozessen (`tirex-master` und `tirex-backend-manager`). `tirex-entrypoint.sh` startet
+  beide, beendet sich einer, endet auch der Container und wird von Docker neu gestartet.
+- Tirex loggt nur per syslog. Ein busybox-syslogd im Container gibt die Meldungen auf stdout aus
+  (`docker compose logs tirex`).
+- `THREADS` legt die Anzahl der Render-Prozesse fest. Tirex verteilt die Aufträge nach Priorität auf Buckets
+  (`tirex/tirex.conf`): Fehlende Tiles rendert es sofort, veraltete Tiles nach einem Import nur, solange die
+  Load des Hosts unter 4 liegt.
+- Der Tile-Cache lässt sich zwischen renderd und Tirex weiterverwenden, beide schreiben dasselbe Metatile-Format.
+  Sollten die Benutzer `_renderd` und `_tirex` in einer künftigen Ubuntu-Version verschiedene IDs haben,
+  übernimmt Tirex die vorhandenen Dateien beim Start per `chown` (kann bei großen Caches dauern).
+- Status der Warteschlange: `docker compose exec tirex tirex-status`

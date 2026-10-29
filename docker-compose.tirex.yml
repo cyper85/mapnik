@@ -1,0 +1,30 @@
+# Tirex statt renderd als Renderer, Apache bindet ihn über denselben Socket ein:
+#   docker compose -f docker-compose.yml -f docker-compose.tirex.yml up --detach --build
+services:
+  # renderd nicht starten (nur über "--profile renderd" erreichbar), beide würden denselben Socket belegen
+  renderd:
+    profiles: [renderd]
+
+  tirex:
+    build:
+      context: .
+      dockerfile: Dockerfile.tirex
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-test-postgis}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      THREADS: ${THREADS:-4}
+    volumes:
+      - tiles:/var/cache/renderd/tiles
+      - renderd-socket:/run/renderd
+      - cyclosm-data:/var/lib/cyclosm
+    # Tirex wartet selbst, bis der erste Import produktiv ist
+    depends_on:
+      - import
+    restart: unless-stopped
+
+  apache:
+    depends_on: !override
+      - tirex

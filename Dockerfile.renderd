@@ -12,7 +12,7 @@ RUN apt-get --quiet update && \
     rm --recursive --force /var/lib/apt/lists/* && \
     npm install --global carto
 
-# Shapefiles (Landflächen) lädt renderd-entrypoint.sh beim Start nach /var/lib/cyclosm
+# Shapefiles (Landflächen) lädt render-prepare.sh beim Start nach /var/lib/cyclosm
 COPY cyclosm-prepare.py /usr/local/bin/cyclosm-prepare.py
 WORKDIR /usr/local/share/cyclosm
 RUN curl --fail --silent --show-error --location \
@@ -58,6 +58,7 @@ RUN plugins="$(find /usr/lib -type d -path '*/mapnik/*/input' | head --lines=1)"
     chown "$RENDERD_USER": /run/renderd /var/cache/renderd/tiles
 
 COPY editmapnikconfig.py /usr/local/bin/editmapnikconfig.py
+COPY render-prepare.sh /usr/local/bin/render-prepare.sh
 COPY renderd-entrypoint.sh /usr/local/bin/renderd-entrypoint.sh
 RUN chmod a+x /usr/local/bin/editmapnikconfig.py /usr/local/bin/renderd-entrypoint.sh
 

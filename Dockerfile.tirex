@@ -1,0 +1,73 @@
+# Wie Dockerfile.renderd, nur mit Tirex statt renderd als Renderer.
+# Der Apache-Container (Dockerfile.apache) funktioniert mit beiden unverändert.
+
+# CyclOSM gibt es nicht als Paket: Quellen laden und mit carto in ein Mapnik-Stylesheet übersetzen.
+# Eigene Build-Stufe, damit Node.js und carto nicht im fertigen Image landen
+FROM ubuntu:26.04 AS cyclosm
+
+ARG DEBIAN_FRONTEND=noninteractive
+# Version muss zu Dockerfile.import passen (Views und Spalten in der Datenbank), Renovate aktualisiert alle gemeinsam
+# renovate: datasource=github-tags depName=cyclosm/cyclosm-cartocss-style
+ARG CYCLOSM_VERSION=v0.7.1
+
+RUN apt-get --quiet update && \
+    apt-get --yes --quiet --no-install-recommends install ca-certificates curl nodejs npm python3-yaml && \
+    rm --recursive --force /var/lib/apt/lists/* && \
+    npm install --global carto
+
+# Shapefiles (Landflächen) lädt render-prepare.sh beim Start nach /var/lib/cyclosm
+COPY cyclosm-prepare.py /usr/local/bin/cyclosm-prepare.py
+WORKDIR /usr/local/share/cyclosm
+RUN curl --fail --silent --show-error --location \
+        "https://github.com/cyclosm/cyclosm-cartocss-style/archive/refs/tags/${CYCLOSM_VERSION}.tar.gz" \
+        | tar --extract --gzip --strip-components=1 && \
+    python3 /usr/local/bin/cyclosm-prepare.py project.mml renderd.mml /var/lib/cyclosm shapefiles.txt && \
+    carto renderd.mml > cyclosm.xml && \
+    test -s cyclosm.xml && test -s shapefiles.txt
+
+
+FROM ubuntu:26.04
+
+ENV TZ=Etc/UTC
+ARG DEBIAN_FRONTEND=noninteractive
+ENV POSTGRES_DB=postgres
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=""
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
+ENV THREADS=4
+# System-User, den das Debian/Ubuntu-Paket tirex anlegt
+ENV TIREX_USER=_tirex
+
+# Gleiche Pakete wie in Dockerfile.renderd, busybox für syslogd.
+# tirex ohne Recommends, die würden einen kompletten Apache mitbringen
+RUN apt-get --quiet update && \
+    apt-get --yes --quiet install openstreetmap-carto curl mapnik-utils busybox python3-lxml python3-psycopg2 python3-requests python3-yaml fonts-dejavu-core fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted fonts-hanazono fonts-unifont && \
+    apt-get --yes --quiet --no-install-recommends install tirex && \
+    rm --recursive --force /var/lib/apt/lists/*
+
+# Stylesheet und Symbole von CyclOSM
+COPY --from=cyclosm /usr/local/share/cyclosm /usr/local/share/cyclosm
+
+# Configure Tirex: nur das Mapnik-Backend, Kartenstile prüfen und die Originale sichern
+# (tirex-entrypoint.sh erzeugt daraus bei jedem Start die Kartenstile und die Stylesheets mit den DB-Zugangsdaten)
+COPY tirex/ /etc/tirex/
+RUN rm --recursive --force /etc/tirex/renderer/test /etc/tirex/renderer/test.conf && \
+    test -e "$(readlink --canonicalize /usr/share/tirex/mapnik/input)" && \
+    cp --recursive /etc/tirex/renderer/mapnik /etc/tirex/renderer/mapnik.orig && \
+    for xml in $(sed --quiet 's/^mapfile=//p' /etc/tirex/renderer/mapnik/*.conf); do \
+        test -f "$xml" && cp "$xml" "$xml.orig" || exit 1; \
+    done && \
+    id "$TIREX_USER" && \
+    mkdir --parents /run/renderd /run/tirex /var/cache/renderd/tiles /var/lib/cyclosm && \
+    chown "$TIREX_USER": /run/renderd /run/tirex /var/cache/renderd/tiles
+
+COPY editmapnikconfig.py /usr/local/bin/editmapnikconfig.py
+COPY render-prepare.sh /usr/local/bin/render-prepare.sh
+COPY tirex-entrypoint.sh /usr/local/bin/tirex-entrypoint.sh
+RUN chmod a+x /usr/local/bin/editmapnikconfig.py /usr/local/bin/tirex-entrypoint.sh
+
+# Heruntergeladene Shapefiles für CyclOSM
+VOLUME /var/lib/cyclosm
+
+ENTRYPOINT ["/usr/local/bin/tirex-entrypoint.sh"]
